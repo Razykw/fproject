@@ -1,6 +1,7 @@
 const express = require("express");
 const MenuItem = require("../models/MenuItem");
 const menuItemsRouter = express.Router();
+const mongoose = require('mongoose');
 
 // Fetch all menu items
 menuItemsRouter.get("/", async (req, res) => {
@@ -15,10 +16,14 @@ menuItemsRouter.get("/", async (req, res) => {
 // Create a new menu item
 menuItemsRouter.post("/", async (req, res) => {
   try {
-    const newItem = new MenuItem(req.body);
+    const newItem = new MenuItem({ _id: new mongoose.Types.ObjectId(),
+      ...req.body});
+   
+    console.log("item",newItem);
     await newItem.save();
     res.json(newItem);
   } catch (err) {
+    console.error(err); // print out error
     res.status(500).json({ message: "Internal server error" });
   }
 });

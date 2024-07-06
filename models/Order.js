@@ -23,7 +23,8 @@ const OrderSchema = new Schema({
         category: { type: String, required: [true, 'Item category is required'] },
         description: { type: String, required: [true, 'Item description is required'] },
         quantity: { type: Number, required: [true, 'Item quantity is required'] },
-        image: { type: String, required: [true, 'Item image URL is required'] }
+        image: { type: String, required: [true, 'Item image URL is required'] },
+        ingredients: [{ type: String }],
       },
       quantity: { type: Number, required: [true, 'Quantity is required'] },
       price: { type: Number, required: [true, 'Price is required'] }

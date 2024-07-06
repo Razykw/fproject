@@ -11,7 +11,7 @@ reportsRouter.get("/income", async (req, res) => {
         {
             $group: {
                 _id: null,
-                totalIncome: { $sum: "$total" }
+                totalIncome: { $sum: "$totalPrice" } // corrected field name
             }
         }
     ]);
@@ -20,7 +20,6 @@ reportsRouter.get("/income", async (req, res) => {
     console.log("totalIncome",totalIncome)
     res.json(totalIncome);
 });
-
 
 // Fetch the total income for a specific year
 reportsRouter.get("/income/:year", async (req, res) => {
@@ -37,10 +36,11 @@ reportsRouter.get("/income/:year", async (req, res) => {
         {
             $group: {
                 _id: null,
-                totalIncome: { $sum: "$total" }
+                totalIncome: { $sum: "$totalPrice" } // corrected field name
             }
         }
     ]);
+    console.log("incomeyear", income);
     res.json(income[0]?.totalIncome || 0);
 });
 
@@ -60,7 +60,7 @@ reportsRouter.get("/income/:year/:month", async (req, res) => {
         {
             $group: {
                 _id: null,
-                totalIncome: { $sum: "$total" }
+                totalIncome: { $sum: "$totalPrice" } // corrected field name
             }
         }
     ]);
@@ -84,14 +84,15 @@ reportsRouter.get("/income/:year/:month/:day", async (req, res) => {
         {
             $group: {
                 _id: null,
-                totalIncome: { $sum: "$total" }
+                totalIncome: { $sum: "$totalPrice" } // corrected field name
             }
         }
     ]);
     res.json(income[0]?.totalIncome || 0);
 });
+
 reportsRouter.get("/most-selling-dish", async (req, res) => {
-    const dish = await Order.aggregate([
+    const dishes = await Order.aggregate([
         { $unwind: "$items" },
         {
             $group: {
@@ -100,7 +101,7 @@ reportsRouter.get("/most-selling-dish", async (req, res) => {
             }
         },
         { $sort: { count: -1 } },
-        { $limit: 1 },
+        { $limit: 5 },  // Get the top 5 most selling dishes
         {
             $lookup: {
                 from: "menuItems",
@@ -110,11 +111,24 @@ reportsRouter.get("/most-selling-dish", async (req, res) => {
             }
         },
         { $unwind: "$item" },
-        { $project: { _id: 0, mostSellingDish: "$item.name", count: 1 } }
+        {
+          $project: { 
+              _id: 0, 
+              name: "$item.name", 
+              itemID: "$item.itemID",
+              description: "$item.description",
+              price: "$item.price",
+              category: "$item.category",
+              image: "$item.image",
+              inventoryItem: "$item.inventoryItem",
+              count: 1 
+          } 
+        }
     ]);
-    console.log("most:", dish);
-    res.json(dish[0] || "No dishes sold");
+    console.log("Most Selling Dishes:", dishes);
+    res.json(dishes.length ? dishes : "No dishes sold");
 });
+
 
 // Fetch the most selling dish for a specific user
 reportsRouter.get("/most-selling-dish/user/:email", async (req, res) => {
@@ -140,11 +154,46 @@ reportsRouter.get("/most-selling-dish/user/:email", async (req, res) => {
         }
       },
       { $unwind: "$item" },
-      { $project: { _id: 0, mostSellingDish: "$item.name", count: 1 } }
+      {  $project: { 
+        _id: "item._id", 
+        name: "$item.name", 
+        itemID: "$item.itemID",
+        description: "$item.description",
+        price: "$item.price",
+        category: "$item.category",
+        image: "$item.image",
+        inventoryItem: "$item.inventoryItem",
+        count: 1 
+         } 
+    }
     ]);
     console.log("most:",mostSellingDish);
     res.json(mostSellingDish);
   });
+  // Fetch the total income by meal
+reportsRouter.get("/income-by-meal", async (req, res) => {
+    const incomeByMeal = await Order.aggregate([
+        { $unwind: "$items" },
+        {
+            $group: {
+                _id: "$items.item.name",
+                totalIncome: { $sum: { $multiply: ["$items.quantity", "$items.price"] } }
+            }
+        },
+        { $sort: { totalIncome: -1 } },
+        {
+            $project: {
+                _id: 0,
+                meal: "$_id",
+                totalIncome: "$totalIncome"
+            }
+        }
+    ]);
+
+    console.log("Income by meal:", incomeByMeal);
+    res.json(incomeByMeal);
+});
+
   
 
 

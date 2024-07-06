@@ -2,6 +2,11 @@ const express = require("express");
 const User = require("../models/User.js");
 const bcrypt = require('bcrypt'); // you need to install this using npm install bcrypt
 const userRouter = express.Router();
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' }); // You can configure the destination
+const jwt = require('jsonwebtoken');
+const secret = "your_secret_key";
+
 userRouter.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -14,9 +19,10 @@ userRouter.post("/login", async (req, res) => {
     if (user.password !== password) {
       return res.status(401).json({ message: "Unauthorized: Incorrect password" });
     }
+    const token = jwt.sign({ email: user.email, role: user.role }, secret, { expiresIn: '1h' });
 
     // Authentication successful, return a success response
-    res.json({ user: {email: user.email, role: user.role, name: user.name }, message: "User logged in successfully" }); // added user information
+    res.json({ user: {email: user.email, role: user.role, name: user.name, age: user.age,phone: user.phone,city: user.city,photo: user.photo }, token, message: "User logged in successfully" }); // added user information
   } catch (error) {
     console.error('Error during login:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -50,6 +56,29 @@ userRouter.get("/:email", async(req,res)=>{
     const data = await User.find({email: req.params.email}).exec();
     res.json(data);
 });
+userRouter.post("/changePassword", async (req, res) => {
+  const { email, currentPassword, newPassword } = req.body;
+
+  try {
+    const user = await User.findOne({ email }).exec();
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (currentPassword !== user.password) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error('Error during password change:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 
 userRouter.put('/update/:email', async (req, res) => {
   try {
@@ -60,7 +89,8 @@ userRouter.put('/update/:email', async (req, res) => {
     if (result.matchedCount === 0 && result.modifiedCount === 0) {
       throw new Error('User not found');
     } else {
-      res.sendStatus(200);
+      res.status(200).json({ message: 'User updated successfully' });
+
     }
   } catch (error) {
     console.error('Error updating user:', error);
@@ -90,6 +120,30 @@ userRouter.delete('/:email', async (req, res) => {
   } catch (error) {
       console.error('Error deleting user:', error);
       res.status(500).json({ message: 'Internal server error' });
+  }
+});
+userRouter.get("/me", async (req, res) => {
+  try {
+    // Extract the token from the Authorization header
+    const token = req.headers.authorization.split(' ')[1];
+
+    // Verify the token
+    const decoded = jwt.verify(token, secret);
+
+    // Get the email from the decoded token
+    const email = decoded.email;
+
+    // Find the user with the provided email
+    const user = await User.findOne({ email }).exec();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ user });
+  } catch (error) {
+    console.error('Error retrieving user profile:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 

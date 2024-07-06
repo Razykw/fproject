@@ -75,7 +75,8 @@ ordersRouter.post("/", async (req, res) => {
           category: menuItem.category,
           description: menuItem.description,
           quantity: orderItem.quantity, // assuming this is the quantity ordered, not quantity available
-          image: menuItem.image
+          image: menuItem.image,
+          ingredients: orderItem.item.ingredients
         },
         quantity: orderItem.quantity,
         price: orderItem.price,
@@ -167,6 +168,19 @@ ordersRouter.put("/:orderId", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+// Fetch orders based on user role
+ordersRouter.get("/user/:email", async (req, res) => {
+  try {
+    const email = req.params.email; // Get the email parameter from the request
+    const orders = await Order.find({ "user.email": email }); // Query orders using the email
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
+
+
+
 
 // Delete an order
 ordersRouter.delete("/:orderId", async (req, res) => {

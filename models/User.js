@@ -13,7 +13,8 @@ const User = new Schema(
         password: {type: String},
         phone: {type:Number},
         role: {type:String},
-        city: {type: String}
+        city: {type: String},
+        photo: { type: String }
     },
     {
         collection:"users"
